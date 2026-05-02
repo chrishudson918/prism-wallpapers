@@ -859,7 +859,7 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
 
     file_4k = out_dir / "t2_flat_4k.jpg"
-    file_1080p = out_dir / "t2_falt_1080p.jpg"
+    file_1080p = out_dir / "t2_flat_1080p.jpg"
 
     # Save using the blurred dof4k image
     _save(_apply_gradient(dof4k, accent, show_grad), file_4k)
