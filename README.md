@@ -8,7 +8,6 @@ An advanced automation suite for creating luxury media backdrops and logo cards.
 ## 📁 Repository Structure
 
 prism-wallpapers/
-├── collections/
 ├── .gitignore
 ├── README.md
 ├── requirements.txt
