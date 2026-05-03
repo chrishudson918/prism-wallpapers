@@ -225,20 +225,26 @@ python3 backdrop_T2.py --id 28 --type genre             # the type here is genre
 You'll find more IDs in the tmdb_reference_ids.txt file
 
 
-# Example for MDBlist :
-```Bash
-python3 backdrops_T2.py --url "https://mdblist.com/lists/publicusername/top-rated-movies"
+## MDBList Sorting Options
+
+When pulling items from MDBList, you can customize the output sort order using the `--sort` parameter. 
+
+### Usage
+```bash
+python3 backdrop_T2.py --url "[https://mdblist.com/lists/user/slug](https://mdblist.com/lists/user/slug)" --sort <option>
 ```
 or you can also use the Shortened URL Format
-```
+```bash
 python3 backdrops_T2.py --url "publicusername/top-rated-movies"
 
 ```
-Custom Sort Option : to be used after --url "XX* <Custom-Sort>
+# Supported Sort Parameters
 ```
-python3 backdrops_T2.py --url "publicusername/top-rated-movies" --sort imdbrating.desc
-
---sort imdbvotes.desc / --sort score.desc / --sort tmdbpopular.desc /
+score.desc / score.asc  | MDBList overall combined score (Default)
+imdbrating.desc / imdbrating.asc    | Sort by IMDb user ratings
+imdbvotes.desc / imdbvotes.asc  | Sort by the total number of IMDb votes
+tmdbpopular.desc / tmdbpopular.asc  | Sort by TMDb's internal popularity metric
+released.desc / released.asc    | Sort by original theatrical release date
 ```
 
 ---

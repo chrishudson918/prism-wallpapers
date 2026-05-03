@@ -250,12 +250,7 @@ def _parse_mdblist_url(url):
 def fetch_mdblist_items(url, count, sort=None):
     username, slug = _parse_mdblist_url(url)
     label = re.sub(r"[^\w]+", "_", slug.strip().lower()).strip("_") or f"{username}_{slug}"
-    key   = {"apikey": MDBLIST_API_KEY}
-    sort_params = {}
-    if sort:
-        parts = sort.lower().split(".")
-        sort_params["sort"]  = parts[0]
-        sort_params["order"] = parts[1] if len(parts) > 1 else "desc"
+    key = {"apikey": MDBLIST_API_KEY}
 
     print(f"  Fetching MDBList: {username}/{slug} …")
     try:
@@ -273,9 +268,17 @@ def fetch_mdblist_items(url, count, sort=None):
 
     list_id = matched["id"]
     print(f"  Found: '{matched.get('name', slug)}' (id={list_id})")
+
+    # Correct Query Generation for Sorting MDBList items
+    params = {**key}
+    if sort:
+        parts = sort.lower().split(".")
+        params["sort"] = parts[0]
+        params["order"] = parts[1] if len(parts) > 1 else "desc"
+
     try:
         r = requests.get(f"https://api.mdblist.com/lists/{list_id}/items",
-                         params={**key, **sort_params}, timeout=20)
+                         params=params, timeout=20)
         r.raise_for_status()
         data = r.json()
     except Exception as e:
@@ -287,21 +290,24 @@ def fetch_mdblist_items(url, count, sort=None):
 
     results = []
     for entry in raw_items[:count * 2]:
-        imdb_id   = entry.get("imdb_id") or entry.get("imdb")
+        imdb_id = entry.get("imdb_id") or entry.get("imdb")
         mediatype = entry.get("mediatype", "")
-        if not imdb_id: continue
+        if not imdb_id:
+            continue
         kind = "tv" if mediatype == "show" else "movie"
         try:
             find = _tmdb(f"/find/{imdb_id}", {"external_source": "imdb_id"})
             hits = find.get("tv_results" if kind == "tv" else "movie_results", [])
-            if not hits: continue
+            if not hits:
+                continue
             tmdb_item = hits[0]
         except Exception:
             continue
         if not (tmdb_item.get("backdrop_path") or tmdb_item.get("poster_path")):
             continue
         results.append((kind, tmdb_item))
-        if len(results) >= count: break
+        if len(results) >= count:
+            break
 
     return label, results
 
@@ -735,8 +741,7 @@ def main():
                         help="network | provider | company | genre")
     parser.add_argument("--url",         default=None,
                         help="MDBList URL or 'username/list-slug'")
-    parser.add_argument("--sort",        default=None,
-                        help="MDBList sort, e.g. imdbrating.desc")
+    parser.add_argument("--sort", default="score.desc", help="MDBList sort, e.g. imdbrating.desc or score.desc")
     parser.add_argument("--output",      default=None)
     parser.add_argument("--no-gradient", action="store_true")
     args = parser.parse_args()
