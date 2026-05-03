@@ -197,7 +197,7 @@ python3 backdrop_T2.py --id 41077 --type company        # this one is for a A24,
 
 python3 backdrop_T2.py --id 28 --type genre             # the type here is genre, so the ID has to be genre specific 
 ```
-You'll more IDs in the tmdb_reference_ids.txt file
+You'll find more IDs in the tmdb_reference_ids.txt file
 
 🔧 Overriding Specific Logos (Design Hotfixes)
 
