@@ -8,11 +8,11 @@
 IDS_INPUT=$1
 TYPE=$2
 
-# If curated type is selected, skip running logo_pull.py entirely
+SKIP_LOGOS=false
+
 if [ "$TYPE" == "curated" ]; then
     SKIP_LOGOS=true
 fi
-# Check if --skip-logos was passed anywhere as the 3rd or 4th argument
 for arg in "$@"; do
     if [ "$arg" == "--skip-logos" ]; then
         SKIP_LOGOS=true
@@ -31,11 +31,8 @@ PY_CMD="python3"
 if [[ "$IDS_INPUT" == *"-"* ]]; then
     echo "── 🔀 Mixed IDs detected: $IDS_INPUT"
     
-    # Split the hyphenated string into individual IDs for Python
-    # e.g., "6100-2076" becomes "6100 2076"
     CLEAN_IDS=$(echo "$IDS_INPUT" | tr '-' ' ')
     
-    # ── 1. Pull Logos (Unless skipped) ──
     if [ "$SKIP_LOGOS" = false ]; then
         echo "── 1. Pulling logos for mixed sources..."
         for ID in $CLEAN_IDS; do
@@ -46,8 +43,6 @@ if [[ "$IDS_INPUT" == *"-"* ]]; then
         echo "── 1. [SKIPPED] Skipping logo pull as requested."
     fi
 
-    # ── 2. Run the 4 backdrop variations in mixed mode ──
-    # Passing the individual IDs as multiple args to Python: --id 6100 2076
     echo ""
     echo "── 2. Generating Mixed T1 Backdrops..."
     $PY_CMD "$ROOT_DIR/scripts/backdrop_T1.py" --id $CLEAN_IDS --type "$TYPE"
@@ -65,10 +60,7 @@ if [[ "$IDS_INPUT" == *"-"* ]]; then
     $PY_CMD "$ROOT_DIR/scripts/backdrop_T2_flat.py" --id $CLEAN_IDS --type "$TYPE"
 
 else
-    # ── Standard Mode: Loop through IDs individually ──
-    # Supports passing multiple separate IDs like `./generate.sh 6100 2076 network`
     
-    # Extract IDs from everything except the second argument (type) and flags
     IDS=()
     for arg in "$@"; do
         if [ "$arg" != "$TYPE" ] && [ "$arg" != "--skip-logos" ]; then
