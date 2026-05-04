@@ -99,6 +99,7 @@ Great for organizing company-branded backdrops and layouts.
 | 198847 | crunchyroll |
 | 13 | Nickelodeon |
 | 17981 | AT-X |
+| 204957 | MUBI |
 
 Future addition for Production Companies/Studios : Nickelodeon, ...
 
@@ -172,7 +173,5 @@ Future addition for Networks :
 | 1956 | Angel studios |
 | 344 | Rakuten viki |
 | 175 | netflix-kids |
-
-
 
 Future addition for Providers : 
