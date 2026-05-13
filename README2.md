@@ -339,6 +339,7 @@ To save time or prevent overwriting existing downloaded logos, you can use the `
 ```
 
 Note: The --skip-logos flag is applied automatically when using --type curated, as these lists do not require individual brand logo downloads.
+
 ---
 
 🔧 Overriding Specific Logos (Design Hotfixes)

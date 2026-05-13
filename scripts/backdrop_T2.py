@@ -13,6 +13,7 @@ import random
 import argparse
 import re
 from pathlib import Path
+from dotenv import load_dotenv
 from datetime import datetime
 
 import requests
@@ -23,11 +24,20 @@ from PIL import Image, ImageDraw, ImageFilter
 # ║                        CONFIGURATION                             ║
 # ╚═══════════════════════════════════════════════════════════════════╝
 
-import os
-from dotenv import load_dotenv
+
+
 
 # Load keys from the .env file in the project root
-load_dotenv()
+env_path = Path(__file__).resolve().parent / ".env"
+if not env_path.exists():
+    env_path = Path(__file__).resolve().parent.parent / ".env"
+
+load_dotenv(dotenv_path=env_path)
+
+TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+# Add a debug print to verify the key is loading
+if not TMDB_API_KEY:
+    print("❌ ERROR: TMDB_API_KEY not found in .env file!")
 
 # Retrieve keys safely from environment variables
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
@@ -109,18 +119,41 @@ FANART_BASE = "https://webservice.fanart.tv/v3"
 # -- TMDB Helpers
 
 def _tmdb(endpoint, params=None):
+    if not TMDB_API_KEY:
+        print("  ❌ CRITICAL: No API Key loaded. Check your .env file path.")
+        return {}
+
     p = dict(params or {})
     p["api_key"] = TMDB_API_KEY
-    r = requests.get(f"{TMDB_BASE}{endpoint}", params=p, timeout=15)
-    r.raise_for_status()
+    
+    # trending endpoints do not support include_adult
+    if "trending" not in endpoint:
+        p["include_adult"] = False
+        
+    url = f"{TMDB_BASE}{endpoint}"
+    try:
+        r = requests.get(url, params=p, timeout=15)
+        if r.status_code != 200:
+            print(f"  ❌ API Error {r.status_code}: {r.text}")
+            return {}
+        return r.json()
+    except Exception as e:
+        print(f"  ❌ Connection Error: {e}")
+        return {}
+
     return r.json()
 
 
 def _pull_tv(extra, count):
     items = []
     for page in range(1, 6):
-        data = _tmdb("/discover/tv", {"sort_by": "popularity.desc",
-                                      "page": page, "language": "en-US", **extra})
+        data = _tmdb("/discover/tv", {
+            "sort_by": "popularity.desc",
+            "page": page, 
+            "language": "en-US", 
+            "include_adult": False,  # Add this line
+            **extra
+        })
         for item in data.get("results", []):
             if item.get("backdrop_path") or item.get("poster_path"):
                 items.append(("tv", item))
@@ -132,8 +165,13 @@ def _pull_tv(extra, count):
 def _pull_movies(extra, count):
     items = []
     for page in range(1, 6):
-        data = _tmdb("/discover/movie", {"sort_by": "popularity.desc",
-                                         "page": page, "language": "en-US", **extra})
+        data = _tmdb("/discover/movie", {
+            "sort_by": "popularity.desc",
+            "page": page, 
+            "language": "en-US", 
+            "include_adult": False,  # Add this line
+            **extra
+        })
         for item in data.get("results", []):
             if item.get("backdrop_path") or item.get("poster_path"):
                 items.append(("movie", item))
@@ -163,33 +201,74 @@ def _calculate_focal_score(item):
 
 def fetch_titles(tmdb_id, id_type, count):
     items = []
+    # 1. Determine the media filter based on the ID suffix
+    target_id = str(tmdb_id).lower().strip()
+    only_movies = "-movies" in target_id
+    only_tv = "-tv" in target_id
     
-    # Handle the new 'curated' type first
-    if id_type == "curated":
-        curated_type = str(tmdb_id).lower().strip()
-        print(f"  -> Pulling curated TMDb list: {curated_type}")
-        
-        if curated_type == "trending":
-            # Pull daily trending movies and TV shows from TMDb
-            m_data = _tmdb("/trending/movie/day")
-            t_data = _tmdb("/trending/tv/day")
-            combined = [("movie", i) for i in m_data.get("results", [])] + [("tv", i) for i in t_data.get("results", [])]
-        elif curated_type == "popular":
-            m_data = _tmdb("/movie/popular")
-            t_data = _tmdb("/tv/popular")
-            combined = [("movie", i) for i in m_data.get("results", [])] + [("tv", i) for i in t_data.get("results", [])]
-        elif curated_type == "top_rated":
-            m_data = _tmdb("/movie/top_rated")
-            t_data = _tmdb("/tv/top_rated")
-            combined = [("movie", i) for i in m_data.get("results", [])] + [("tv", i) for i in t_data.get("results", [])]
-        elif curated_type == "upcoming":
-            m_data = _tmdb("/movie/upcoming")
-            combined = [("movie", i) for i in m_data.get("results", [])]
-        else:
-            print(f"  Unknown curated type: '{curated_type}'.")
-            sys.exit(1)
+    # Clean the ID for the actual API call (e.g., "123-movies" -> "123")
+    clean_id = target_id.replace("-movies", "").replace("-tv", "")
 
-        # Sort combined items by popularity to ensure top titles are pulled
+    # 2. Curated Logic
+    if id_type == "curated":
+        print(f"  -> Pulling curated TMDb list: {target_id}")
+        combined = []
+        
+        # 1. Initialize data containers to avoid "Variable not defined" errors
+        m_data = {"results": []}
+        t_data = {"results": []}
+        
+        # 2. Determine the base category (trending, popular, etc.)
+        base = clean_id.split("-")[0]
+        
+        # 3. Fetch Data based on Media Type
+        if base == "trending":
+            if not only_tv: m_data = _tmdb("/trending/movie/day")
+            if not only_movies: t_data = _tmdb("/trending/tv/day")
+        elif base == "popular":
+            if not only_tv: m_data = _tmdb("/movie/popular")
+            if not only_movies: t_data = _tmdb("/tv/popular")
+        elif base == "top_rated":
+            if not only_tv: m_data = _tmdb("/movie/top_rated")
+            if not only_movies: t_data = _tmdb("/tv/top_rated")
+        elif base == "upcoming":
+            # TV doesn't have a specific 'upcoming' endpoint on TMDB
+            if not only_tv: m_data = _tmdb("/movie/upcoming")
+        else:
+            print(f"  Unknown curated type: '{base}'.")
+            sys.exit(1)
+        
+        # 4. Assemble the combined list
+        combined = [("movie", i) for i in m_data.get("results", [])] + \
+                   [("tv", i) for i in t_data.get("results", [])]
+
+    # 3. Network / Company / Provider / Genre Logic
+    elif id_type == "network":
+        # Networks are TV-centric by nature
+        items = _pull_tv({"with_networks": clean_id}, count)
+        
+    elif id_type == "company":
+        tv = [] if only_movies else _pull_tv({"with_companies": clean_id}, count)
+        movies = [] if only_tv else _pull_movies({"with_companies": clean_id}, count)
+        combined = tv + movies
+        
+    elif id_type == "provider":
+        tv = [] if only_movies else _pull_tv({"with_watch_providers": clean_id, "watch_region": "US"}, count)
+        movies = [] if only_tv else _pull_movies({"with_watch_providers": clean_id, "watch_region": "US"}, count)
+        combined = tv + movies
+        
+    elif id_type == "genre":
+        movies = [] if only_tv else _pull_movies({"with_genres": clean_id}, count)
+        tv = [] if only_movies else _pull_tv({"with_genres": clean_id}, count)
+        combined = movies + tv
+        
+    else:
+        print(f"  Unknown --type '{id_type}'.")
+        sys.exit(1)
+
+    # 4. Processing results for non-curated/non-network types
+    # This block now captures EVERYTHING processed into 'combined'
+    if 'combined' in locals() and combined:
         combined_sorted = sorted(combined, key=lambda kt: kt[1].get("popularity", 0), reverse=True)
         seen = set()
         for k, item in combined_sorted:
@@ -199,52 +278,18 @@ def fetch_titles(tmdb_id, id_type, count):
             if len(items) >= count:
                 break
 
-    elif id_type == "network":
-        items = _pull_tv({"with_networks": tmdb_id}, count)
-    elif id_type == "company":
-        tv = _pull_tv({"with_companies": tmdb_id}, count)
-        movies = _pull_movies({"with_companies": tmdb_id}, count)
-        combined = sorted(tv + movies, key=lambda kt: kt[1].get("popularity", 0), reverse=True)
-        seen = set()
-        for k, item in combined:
-            if item["id"] not in seen:
-                seen.add(item["id"])
-                items.append((k, item))
-            if len(items) >= count:
-                break
-    elif id_type == "provider":
-        tv = _pull_tv({"with_watch_providers": tmdb_id, "watch_region": "US"}, count)
-        movies = _pull_movies({"with_watch_providers": tmdb_id, "watch_region": "US"}, count)
-        combined = sorted(tv + movies, key=lambda kt: kt[1].get("popularity", 0), reverse=True)
-        seen = set()
-        for k, item in combined:
-            if item["id"] not in seen:
-                seen.add(item["id"])
-                items.append((k, item))
-            if len(items) >= count:
-                break
-    elif id_type == "genre":
-        movies = _pull_movies({"with_genres": tmdb_id}, count)
-        tv = _pull_tv({"with_genres": tmdb_id}, count)
-        combined = sorted(movies + tv, key=lambda kt: kt[1].get("popularity", 0), reverse=True)
-        seen = set()
-        for k, item in combined:
-            if item["id"] not in seen:
-                seen.add(item["id"])
-                items.append((k, item))
-            if len(items) >= count:
-                break
-    else:
-        print(f"  Unknown --type '{id_type}'.")
-        sys.exit(1)
-
     # Final deduplication pass
     seen_unique, unique = set(), []
     for k, item in items:
-        key = (item.get("media_type", k), item["id"])
+        # Check if item is a dict (TMDb) or something else
+        item_id = item.get("id") if isinstance(item, dict) else getattr(item, "id", None)
+        if not item_id: continue
+        
+        key = (item.get("media_type", k), item_id)
         if key not in seen_unique:
             seen_unique.add(key)
             unique.append((k, item))
+            
     return unique[:count]
 
 

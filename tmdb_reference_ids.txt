@@ -2,6 +2,9 @@
 
 A curated collection of common IDs from The Movie Database (TMDb) for creating specific media layouts and branding.
 
+XYZ Films, GK Films, Youtube Premium, Filmnation
+
+
 ---
 
 ## 🏢 Popular Production Companies
@@ -29,7 +32,7 @@ Great for organizing company-branded backdrops and layouts.
 | 34 | Sony Pictures |
 | 3 Pixar |
 | 127928 | 20th century studios |
-| 1 | Licasfilm |
+| 1 | Lucasfilm Ltd. |
 | 521 | DreamWorks Animation  |
 | 7 | DreamWorks Pictures |
 | 1632 | Lionsgate |
