@@ -28,7 +28,7 @@ jobs:
           echo "MDBLIST_API_KEY=${{ secrets.MDBLIST_API_KEY }}" >> .env
 
       - name: Run generate script
-        run: bash generate.sh network 213
+        run: bash generate.sh 213 network
 
       - name: Commit and push results
         run: |
