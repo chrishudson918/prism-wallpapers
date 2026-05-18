@@ -32,12 +32,7 @@ jobs:
           bash generate.sh 213 network
           bash generate.sh 90733 company
           bash generate.sh --url "snoak/top-2020s-movies" --sort released.desc
-          bash generate.sh --url "snoak/top-2010s-movies" --sort released.desc
-          bash generate.sh --url "snoak/top-2000s-movies" --sort released.desc
-          bash generate.sh --url "snoak/top-1990s-movies" --sort released.desc
-          bash generate.sh --url "snoak/top-1980s-movies" --sort released.desc
-          bash generate.sh --url "snoak/popular-1970s-movies" --sort released.desc
-          bash generate.sh --url "snoak/popular-1960s-movies" --sort released.desc
+          
 
       - name: Commit and push results
         run: |
